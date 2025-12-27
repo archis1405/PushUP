@@ -1,0 +1,10 @@
+It is just a sample file to check whetehr pushup is working fine or not. for the initial commit.
+
+@nd commit changes
+
+3rd commit changes
+
+Sample changes for a commit and i am changing this 
+Some more changes for the push up repo and fpr the fifth commit
+
+Added a new line 
