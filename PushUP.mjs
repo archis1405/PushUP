@@ -204,6 +204,27 @@ class PushUP {
         }
     }
 
+    async status(){
+        const currentBranch = await this.getCurrentBranch();
+        const index = JSON.parse(await fs.readFile(this.indexPath, { encoding: 'utf-8' }));
+
+        console.log(chalk.cyan(`\nOn branch '${currentBranch}\n'`));
+
+        if(index.length === 0){
+            console.log(chalk.green('Nothing staged for commit\n'));
+        }
+
+        else{
+            console.log(chalk.green('Changes staged for commit:\n'));
+
+            index.forEach(file => {
+                console.log(chalk.green(`  modified:   ${file.filePath}`));
+            });
+
+            console.log();
+        }
+    }
+
     async getParentFileContent(parentCommitData, filePath) {
         const parentFile = parentCommitData.files.find(file => file.filePath === filePath);
 
