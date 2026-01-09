@@ -263,6 +263,90 @@ class PushUP {
         }
     }
 
+    async checkout(branchName){
+        const branchPath = path.join(this.branchesPath, branchName);
+
+        try{
+            await fs.access(branchPath);
+
+            const index = JSON.parse(await fs.readFile(this.indexPath, { encoding: 'utf-8' }));
+
+            if(index.length > 0){
+                console.log(chalk.red('✗ Cannot switch branches with uncommitted changes'));
+                console.log(chalk.yellow('  Please commit or reset your changes first'));
+                
+                return;
+            }
+
+            const branchCommit = await fs.readFile(branchPath, { encoding: 'utf-8' });
+
+            await fs.writeFile(this.headPath, branchCommit);
+            await fs.writeFile(this.currentBranchPath, branchName);
+
+            console.log(chalk.green(`Switched to branch '${branchName}'`));
+        }
+
+        catch{
+            console.log(chalk.red(`✗ Branch '${branchName}' does not exist`));
+
+            console.log(chalk.yellow(`  Use 'pushup branch ${branchName}' to create it`));
+        }
+    }
+
+    async merge(branchName){
+        const currentBranch = await this.getCurrentBranch();
+
+        if(branchName === currentBranch){
+            console.log(chalk.red('Cannot merge a branch into itself'));
+            return;
+        }
+        
+        const branchPath = path.join(this.branchesPath, branchName);
+
+        try{
+            await fs.access(branchPath);
+
+            const branchCommit = await fs.readFile(branchPath, { encoding: 'utf-8' });
+            const currentCommit = await this.getCurrentHead();
+
+            if(!branchCommit){
+                console.log(chalk.red(`Branch '${branchName}' has no commits`));
+                return;
+            }
+
+            if(branchCommit === currentCommit){
+                console.log(chalk.yellow('Already up to date'));
+                return;
+            }
+
+            const branchCommitData = JSON.parse(await this.getCommitData(branchCommit));
+
+            const mergeCommmitData = {
+                timestamp: new Date().toISOString(),
+                message: `Merge branch '${branchName}' into ${currentBranch}`,
+                files: branchCommitData.files,
+                parent: currentCommit,
+                mergeParent: branchCommit
+            };
+
+            const mergeCommitHash = this.hashObject(JSON.stringify(mergeCommmitData));
+            const mergeCommitPath = path.join(this.objectsPath, mergeCommitHash);
+
+            await fs.writeFile(mergeCommitPath, JSON.stringify(mergeCommmitData));
+            await fs.writeFile(this.headPath, mergeCommitHash);
+
+            const currentBranchPath = path.join(this.branchesPath, currentBranch);
+            await fs.writeFile(currentBranchPath, mergeCommitHash);
+
+            console.log(chalk.green(`Merged branch '${branchName}' into '${currentBranch}'`));
+            console.log(chalk.green(`New merge commit created: ${mergeCommitHash}`));
+        }
+
+        catch{
+            console.log(chalk.red(`Branch '${branchName}' does not exist`));
+        }
+    }
+
     async getParentFileContent(parentCommitData, filePath) {
         const parentFile = parentCommitData.files.find(file => file.filePath === filePath);
 
