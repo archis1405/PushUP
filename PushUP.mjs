@@ -82,6 +82,12 @@ class PushUP {
 
     async commit(message) {
         const index = JSON.parse(await fs.readFile(this.indexPath, { encoding: 'utf-8' }));
+
+        if(index.length === 0){
+            console.log(chalk.yellow('No changes to commit. Staging area is empty.'));
+            return;
+        }
+
         const parentCommit = await this.getCurrentHead();
 
         const commitData = {
@@ -96,30 +102,53 @@ class PushUP {
 
         await fs.writeFile(commitPath, JSON.stringify(commitData));
         await fs.writeFile(this.headPath, commitHash);
+
+        const currentBranch = await this.getCurrentBranch();
+        const branchesPath = path.join(this.branchesPath, currentBranch);
+        await fs.writeFile(branchesPath, commitHash);
+
         await fs.writeFile(this.indexPath, JSON.stringify([])); // Clear staging area
 
-        console.log(`File committed successfully ${commitHash}`);
+        console.log(chalk.green(`File committed successfully ${commitHash}`));
+
+        console.log(chalk.gray(` ${index.length} file(s) committed`));
     }
 
     async getCurrentHead() {
         try {
             return await fs.readFile(this.headPath, { encoding: 'utf-8' });
-        } catch (error) {
+        } 
+        catch (error) {
             return null;
+        }
+    }
+
+    async getCurrentBranch(){
+        try{
+            return await fs.readFile(this.currentBranchPath, { encoding: 'utf-8' });
+        }
+        catch(error){
+            return 'main';
         }
     }
 
     async log() {
         let currentCommitHash = await this.getCurrentHead();
+        const currentBranch = await this.getCurrentBranch();
+
+        if(!currentCommitHash){
+            console.log(chalk.yellow(`No commits found on branch '${currentBranch}'`));
+            return;
+        }
+
+        console.log(chalk.blue(`\n Commit history for branch '${currentBranch}':`));
 
         while (currentCommitHash) {
             const commitData = JSON.parse(await fs.readFile(path.join(this.objectsPath, currentCommitHash), { encoding: 'utf-8' }));
             
-            console.log('---------------------------');
-            console.log(`Commit: ${currentCommitHash}`);
-            console.log(`Date: ${commitData.timestamp}`);
-            console.log(`Message: ${commitData.message}`);
-            console.log('---------------------------');
+            console.log(chalk.yellow(`commit ${currentCommitHash}`));
+            console.log(`Date:   ${new Date(commitData.timestamp).toLocaleString()}`);
+            console.log(`\n    ${commitData.message}\n`); 
 
             currentCommitHash = commitData.parent;
         }
@@ -129,51 +158,48 @@ class PushUP {
         const commitData = JSON.parse(await this.getCommitData(commitHash));
 
         if (!commitData) {
-            console.error('Commit not found');
+            console.error(chalk.red('Commit not found'));
             return;
         }
 
-        console.log("Changes in the commit are: ");
+        console.log(chalk.cyan(`\nCommit: ${commitHash}`));
+        console.log(`Date:   ${new Date(commitData.timestamp).toLocaleString()}`);
+        console.log(`\n    ${commitData.message}\n`);
 
         for (const file of commitData.files) {
-            console.log(`\nFile: ${file.filePath}`);
-            const fileContent = await this.getFileContent(file.fileHash);
-            console.log(fileContent);
 
-            console.log('---------------------------');
+            console.log(chalk.bold(`\n${file.filePath}`));
+            const fileContent = await this.getFileContent(file.fileHash);
 
             if (commitData.parent) {
+
                 const parentCommitData = JSON.parse(await this.getCommitData(commitData.parent));
                 const getparentFileContent = await this.getParentFileContent(parentCommitData, file.filePath);
 
                 if (getparentFileContent !== undefined) {
-                    console.log("Diff:");
+
                     const diff = diffLines(getparentFileContent, fileContent);
 
                     diff.forEach(part => {
-                       
-                        if (part.added){
-                            process.stdout.write(chalk.green(part.value));
+                        if (part.added) {
+                            process.stdout.write(chalk.green('+ ' + part.value));
                         } 
-                        else if(part.removed) {
-                            process.stdout.write(chalk.red(part.value));
+                        else if (part.removed) {
+                            process.stdout.write(chalk.red('- ' + part.value));
                         } 
-                        else{
-                            process.stdout.write(chalk.gray(part.value));
+                        else {
+                            process.stdout.write(chalk.gray('  ' + part.value));
                         }
-
                     });
 
-                    console.log('\n---------------------------');
+                    console.log();
                 } 
-
-                else{
-                    console.log(chalk.green(`New file added in this commit.`));
+                else {
+                    console.log(chalk.green('+ New file'));
                 }
             } 
-
-            else{
-                console.log('First Commit - No parent commit to compare.');
+            else {
+                console.log(chalk.green('+ New file (initial commit)'));
             }
         }
     }
