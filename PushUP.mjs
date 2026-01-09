@@ -347,6 +347,96 @@ class PushUP {
         }
     }
 
+    async deleteBranch(branchName) {
+        const currentBranch = await this.getCurrentBranch();
+        
+        if (branchName === currentBranch) {
+            console.log(chalk.red(`✗ Cannot delete the current branch '${branchName}'`));
+            return;
+        }
+        
+        if (branchName === 'main') {
+            console.log(chalk.red('✗ Cannot delete the main branch'));
+            return;
+        }
+        
+        const branchPath = path.join(this.branchesPath, branchName);
+        
+        try {
+            await fs.unlink(branchPath);
+            console.log(chalk.green(`✓ Deleted branch '${branchName}'`));
+        } catch {
+            console.log(chalk.red(`✗ Branch '${branchName}' does not exist`));
+        }
+    }
+
+    async reset(commitHash) {
+        try {
+            const commitData = await this.getCommitData(commitHash);
+            if (!commitData) {
+                console.log(chalk.red('✗ Commit not found'));
+                return;
+            }
+            
+            await fs.writeFile(this.headPath, commitHash);
+            
+            const currentBranch = await this.getCurrentBranch();
+            const branchPath = path.join(this.branchesPath, currentBranch);
+            await fs.writeFile(branchPath, commitHash);
+            
+            await fs.writeFile(this.indexPath, JSON.stringify([]));
+            
+            console.log(chalk.green(`✓ Reset HEAD to ${commitHash.slice(0, 7)}`));
+        } catch (error) {
+            console.log(chalk.red('✗ Failed to reset'));
+        }
+    }
+
+    async diff() {
+        const index = JSON.parse(await fs.readFile(this.indexPath, { encoding: 'utf-8' }));
+        
+        if (index.length === 0) {
+            console.log(chalk.yellow('No staged changes'));
+            return;
+        }
+        
+        const currentCommit = await this.getCurrentHead();
+        
+        console.log(chalk.cyan('\nStaged changes:\n'));
+        
+        for (const file of index) {
+            console.log(chalk.bold(file.filePath));
+            
+            const stagedContent = await this.getFileContent(file.fileHash);
+            
+            if (currentCommit) {
+                const commitData = JSON.parse(await this.getCommitData(currentCommit));
+                const committedFile = commitData.files.find(f => f.filePath === file.filePath);
+                
+                if (committedFile) {
+                    const committedContent = await this.getFileContent(committedFile.fileHash);
+                    const diff = diffLines(committedContent, stagedContent);
+                    
+                    diff.forEach(part => {
+                        if (part.added) {
+                            process.stdout.write(chalk.green('+ ' + part.value));
+                        } else if (part.removed) {
+                            process.stdout.write(chalk.red('- ' + part.value));
+                        } else {
+                            process.stdout.write(chalk.gray('  ' + part.value));
+                        }
+                    });
+                } else {
+                    console.log(chalk.green('+ New file'));
+                }
+            } else {
+                console.log(chalk.green('+ New file'));
+            }
+            console.log();
+        }
+    }
+
+
     async getParentFileContent(parentCommitData, filePath) {
         const parentFile = parentCommitData.files.find(file => file.filePath === filePath);
 
@@ -425,6 +515,62 @@ program
     .action(async (commitHash) => {
         const pushup = new PushUP();
         await pushup.showCommitDiff(commitHash);
+    });
+
+program
+    .command('status')
+    .description('Show the working tree status')
+    .action(async () => {
+        const pushup = new PushUP();
+        await pushup.status();
+    });
+
+program
+    .command('branch [branchName]')
+    .description('List branches or create a new branch')
+    .action(async (branchName) => {
+        const pushup = new PushUP();
+        await pushup.branch(branchName, !!branchName);
+    });
+
+program
+    .command('checkout <branchName>')
+    .description('Switch to a different branch')
+    .action(async (branchName) => {
+        const pushup = new PushUP();
+        await pushup.checkout(branchName);
+    });
+
+program
+    .command('merge <branchName>')
+    .description('Merge a branch into the current branch')
+    .action(async (branchName) => {
+        const pushup = new PushUP();
+        await pushup.merge(branchName);
+    });
+
+program
+    .command('delete-branch <branchName>')
+    .description('Delete a branch')
+    .action(async (branchName) => {
+        const pushup = new PushUP();
+        await pushup.deleteBranch(branchName);
+    });
+
+program
+    .command('reset <commitHash>')
+    .description('Reset HEAD to a specific commit')
+    .action(async (commitHash) => {
+        const pushup = new PushUP();
+        await pushup.reset(commitHash);
+    });
+
+program
+    .command('diff')
+    .description('Show staged changes')
+    .action(async () => {
+        const pushup = new PushUP();
+        await pushup.diff();
     });
 
 program.parse(process.argv);
