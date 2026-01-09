@@ -225,6 +225,44 @@ class PushUP {
         }
     }
 
+    async branch(branchName , createNew = false){
+        if(createNew){
+            const branchPath = path.join(this.branchesPath, branchName);
+
+            try{
+                await fs.access(branchPath);
+                console.log(chalk.red(`✗ Branch '${branchName}' already exists`));
+                return;
+            } 
+            catch{
+
+                const getCurrentHead = await this.getCurrentHead();
+                await fs.writeFile(branchPath, getCurrentHead || '');
+
+                console.log(chalk.green(`Created a Branch '${branchName}'`));
+            }
+        }
+
+        else{
+            const branches = await fs.readdir(this.branchesPath);
+            const currentBranch = await this.getCurrentBranch();
+
+            console.log(chalk.cyan('\nBranches:\n'));
+
+            branches.forEach(branch => {
+
+                if(branch === currentBranch){
+                    console.log(chalk.green(`* ${branch}`));
+                }
+                else{
+                    console.log(`  ${branch}`);
+                }
+            });
+
+            console.log();
+        }
+    }
+
     async getParentFileContent(parentCommitData, filePath) {
         const parentFile = parentCommitData.files.find(file => file.filePath === filePath);
 
