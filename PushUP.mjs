@@ -16,17 +16,29 @@ class PushUP {
         this.objectsPath = path.join(this.repoPath, 'objects'); // .pushup/objects
         this.headPath = path.join(this.repoPath, 'HEAD'); // .pushup/HEAD
         this.indexPath = path.join(this.repoPath, 'index'); // .pushup/index --> this is the staging area
+        this.branchesPath = path.join(this.repoPath, 'refs', 'heads');
+        this.currentBranchPath = path.join(this.repoPath, 'CURRENT_BRANCH');
+        
         this.init();
     }
 
     async init() {
         await fs.mkdir(this.objectsPath, { recursive: true });
+
+        await fs.mkdir(this.branchesPath, { recursive: true });
         try {
             await fs.writeFile(this.headPath, '', { flag: 'wx' }); // wx: open for writing. fails if file exists
             await fs.writeFile(this.indexPath, JSON.stringify([]), { flag: 'wx' });
-            console.log('Initialized empty PushUP repository');
-        } catch (error) {
-            console.log('.pushup folder already exists');
+            await fs.writeFile(this.currentBranchPath, 'main', { flag: 'wx' });
+
+            const mainBranchPath = path.join(this.branchesPath, 'main');
+            await fs.writeFile(mainBranchPath, '', { flag: 'wx' });
+
+            console.log(chalk.green('Initialized empty PushUP repository'));
+
+        } 
+        catch (error) {
+            console.log(chalk.yellow('.pushup folder already exists'));
         }
     }
 
@@ -35,20 +47,31 @@ class PushUP {
     }
 
     async add(fileToBeAdded) {
-        const fileData = await fs.readFile(fileToBeAdded, { encoding: 'utf-8' });
-        const fileHash = this.hashObject(fileData);
-        console.log(`File Hash: ${fileHash}`);
+        try{
+            const fileData = await fs.readFile(fileToBeAdded, { encoding: 'utf-8' });
+            const fileHash = this.hashObject(fileData);
+            console.log(`File Hash: ${fileHash}`);
         
-        const newFileHashedObjectPath = path.join(this.objectsPath, fileHash);
-        await fs.writeFile(newFileHashedObjectPath, fileData);
-        await this.updateStagingArea(fileToBeAdded, fileHash);
+            const newFileHashedObjectPath = path.join(this.objectsPath, fileHash);
+            await fs.writeFile(newFileHashedObjectPath, fileData);
+            await this.updateStagingArea(fileToBeAdded, fileHash);
+
+            console.log(chalk.green(`Added the file ${fileToBeAdded}`));
+        }
+        catch(error){
+            console.error(chalk.red(`Error adding file: ${error.message}`));
+        }
         
-        console.log(`Added the file ${fileToBeAdded}`);
     }
 
     async updateStagingArea(filePath, fileHash) {
         const index = JSON.parse(await fs.readFile(this.indexPath, { encoding: 'utf-8' }));
         
+        const existingIndex = index.findIndex(item => item.filePath === filePath);
+
+        if(existingIndex !== -1){
+            index.splice(existingIndex, 1);
+        }
         index.push({
             filePath,
             fileHash

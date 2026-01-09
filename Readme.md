@@ -2,7 +2,7 @@
 
 Welcome to PushUP, a powerful development tool for managing and organizing your projects.
 
-## Features
+## Features(v0)
 
 - Project creation and initialization
 - Version control integration
@@ -10,6 +10,19 @@ Welcome to PushUP, a powerful development tool for managing and organizing your 
 - Collaboration and team communication
 - Documentation generation
 - Code review and feedback
+
+## Features(v1)
+
+- Branch creation and branch management
+- Switching between different branches
+- Merging of branches
+
+## Features(v2)
+
+- Implemented the reset functionality
+- Implement diff command to see the differences between the staged changes and the last changes.
+
+
 
 ## Getting Started
 
@@ -28,6 +41,3 @@ To get started with PushUP, follow these steps:
 
 We welcome contributions from the community. If you would like to contribute to PushUP
 
-## License
-
-PushUP is released under the [MIT License](https://opensource.org/licenses/MIT).
