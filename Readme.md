@@ -36,6 +36,134 @@ To get started with PushUP, follow these steps:
 6. Generate documentation for your project using the documentation generation tool.
 7. Review and provide feedback on code changes using the code review module.
 
+## Commands : 
+
+### Step 0: Initialize Repository
+
+```bash
+node index.js init
+```
+
+---
+
+### Step 1: Basic Commit Flow
+
+```bash
+echo "Hello World" > sample.txt
+
+node index.js add sample.txt
+node index.js status
+
+node index.js commit "Initial commit"
+node index.js log
+```
+
+---
+
+### Step 2: Modify File + Diff
+
+```bash
+echo "Hello PushUP" >> sample.txt
+
+node index.js add sample.txt
+node index.js diff
+
+node index.js commit "Updated file"
+node index.js log
+```
+
+---
+
+### Step 3: Branching
+
+```bash
+node index.js branch feature
+node index.js branch
+
+node index.js checkout feature
+```
+
+---
+
+### Step 4: Work on Feature Branch
+
+```bash
+echo "Feature work" >> sample.txt
+
+node index.js add sample.txt
+node index.js commit "Feature commit"
+
+node index.js log
+```
+
+---
+
+### Step 5: Merge Branch
+
+```bash
+node index.js checkout main
+
+node index.js merge feature
+
+node index.js log
+```
+
+---
+
+### Step 6: Show Commit Changes
+
+Copy a commit hash from `log`
+
+```bash
+node index.js show <commitHash>
+```
+
+---
+
+### Step 7: Reset to Previous Commit
+Copy an older commit hash
+
+```bash
+node index.js reset <commitHash>
+node index.js log
+```
+
+---
+
+### Step 8: Delete Branch
+
+```bash
+node index.js delete-branch feature
+node index.js branch
+```
+
+---
+
+## Demo Flow Summary (Follow This Order)
+
+1. Initialize repo
+2. Add + commit
+3. Modify + diff
+4. Create branch
+5. Switch branch
+6. Commit in branch
+7. Merge branch
+8. Show commit diff
+9. Reset
+10. Delete branch
+
+---
+
+## Tips for Interview
+
+* Keep one terminal + file open side-by-side
+* Copy commit hash once to reuse
+* Speak while executing commands
+* Keep file small (sample.txt)
+
+---
+
+
 
 ## Contributing
 
